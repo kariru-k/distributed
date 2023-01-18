@@ -106,5 +106,50 @@ def company_customers():
     sqlitefragment.commit()
 
 
+def company_customers_invoices_fragments():
+    # create fragment table for customer invoices from customers who aren't attached to a company
+    sqlitefragment_cursor.execute("""
+    CREATE TABLE IF NOT EXISTS 'CompanyClientsInvoice'
+    (
+    'InvoiceId' INTEGER  NOT NULL,
+    'CustomerId' INTEGER  NOT NULL,
+    'InvoiceDate' DATETIME  NOT NULL,
+    'BillingAddress' NVARCHAR(70),
+    'BillingCity' NVARCHAR(40),
+    'BillingState' NVARCHAR(40),
+    'BillingCountry' NVARCHAR(40),
+    'BillingPostalCode' NVARCHAR(10),
+    CONSTRAINT 'PK_Invoice' PRIMARY KEY  ('InvoiceId')
+)
+""")
+
+    localData_cursor = localData.cursor(buffered=True)
+    localData_query = """
+        SELECT InvoiceId, Invoice.CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode
+        FROM Customer, Invoice
+        Where Customer.Company IS NOT NULL
+        AND Customer.CustomerId = Invoice.CustomerId
+        """
+    print("Derived Horizontal Fragmentation")
+    print("")
+    print("Minterm fragment fetched from localhost")
+    localData_cursor.execute(localData_query)
+    local_customers_query_results = localData_cursor.fetchall()
+    print(local_customers_query_results)
+    print("")
+
+    # Inserting the data into site table
+    mysqlFragment_clear = "DELETE FROM CompanyClientsInvoice"
+    sqlitefragment_cursor.execute(mysqlFragment_clear)
+    mysqlFragment_insert_customers_sql = """
+            INSERT INTO CompanyClientsInvoice
+            (InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode)
+            VALUES(?,?,?,?,?,?,?,?);
+            """
+    sqlitefragment_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
+    sqlitefragment.commit()
+
+
 non_northamerican_fragment()
 company_customers()
+company_customers_invoices_fragments()

@@ -81,7 +81,6 @@ def no_company_invoice_fragment():
     ) 
 """)
 
-    # m1: Customers who are from the USA or Canada(Primary Horizontal Fragmentation)
     localData_cursor = localData.cursor(buffered=True)
     localData_query = """
     SELECT InvoiceId, Invoice.CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total
@@ -89,7 +88,7 @@ def no_company_invoice_fragment():
     Where Customer.Company IS NULL
     AND Customer.CustomerId = Invoice.CustomerId
     """
-    print("Primary Fragmentation m2")
+    print("Derived Horizontal Fragmentation")
     print("")
     print("Minterm fragment fetched from localhost")
     localData_cursor.execute(localData_query)
