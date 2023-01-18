@@ -2,7 +2,7 @@ import psycopg2
 import mysql.connector
 
 connection = psycopg2.connect(
-    host='192.168.5.208',
+    host='192.168.5.217',
     user='postgres',
     password='password',
     database='distributedFragment'
@@ -62,6 +62,7 @@ def no_company_fragment():
     connection_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
     connection.commit()
 
+
 # Derived Horizontal Fragmentation of Invoices Using The Non Company Fragment above
 def no_company_invoice_fragment():
     # create fragment table for customer invoices from customers who aren't attached to a company
@@ -77,7 +78,7 @@ def no_company_invoice_fragment():
         BillingPostalCode varchar(10)  DEFAULT NULL,
         Total decimal(10,2) NOT NULL,
         PRIMARY KEY (InvoiceId),
-        CONSTRAINT FK_InvoiceCustomerId FOREIGN KEY (CustomerId) REFERENCES nonCompanyCustomers (CustomerId)
+        CONSTRAINT FK_InvoiceCustomerId FOREIGN KEY (CustomerId) REFERENCES nonCompanyCustomers (CustomerId) ON DELETE CASCADE
     ) 
 """)
 
@@ -107,5 +108,44 @@ def no_company_invoice_fragment():
     connection_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
     connection.commit()
 
+
+def customers_vertical_fragment():
+    # create fragment table for customers who are from the USA or Canada
+    connection_cursor.execute("""
+        CREATE TABLE IF NOT EXISTS Customers_Vertical_Fragment(
+            CustomerId int NOT NULL,
+            Address varchar(70)  DEFAULT NULL,
+            City varchar(40)  DEFAULT NULL,
+            State varchar(40)  DEFAULT NULL,
+            Country varchar(40)  DEFAULT NULL,
+            PRIMARY KEY (CustomerId)
+        )
+""")
+
+    # m1: Customers who are from the USA or Canada(Primary Horizontal Fragmentation)
+    localData_cursor = localData.cursor(buffered=True)
+    localData_query = 'SELECT CustomerId, Address, City, State, Country FROM Customer'
+
+    print("Vertical Fragmentation m3")
+    print("")
+    print("Minterm fragment fetched from localhost")
+    localData_cursor.execute(localData_query)
+    local_customers_query_results = localData_cursor.fetchall()
+    print(local_customers_query_results)
+    print("")
+
+    # Inserting the data into site table
+    mysqlFragment_clear = "DELETE FROM Customers_Vertical_Fragment"
+    connection_cursor.execute(mysqlFragment_clear)
+    mysqlFragment_insert_customers_sql = """
+        INSERT INTO Customers_Vertical_Fragment
+        (CustomerId,Address,City,State,Country)
+        VALUES(%s,%s,%s,%s,%s);
+        """
+    connection_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
+    connection.commit()
+
+
 no_company_fragment()
 no_company_invoice_fragment()
+customers_vertical_fragment()

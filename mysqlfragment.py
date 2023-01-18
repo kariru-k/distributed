@@ -71,5 +71,43 @@ def init_fragment():
     for x in mysqlFragment_cursor:
         print(x)
 
+def customer_vertical_fragment():
+    mysqlFragment_cursor.execute("CREATE DATABASE IF NOT EXISTS chinooksite")
+    mysqlFragment_cursor.execute("USE chinooksite")
 
-init_fragment()
+    # create fragment table for customers who are from the USA or Canada
+    mysqlFragment_cursor.execute("""
+        CREATE TABLE IF NOT EXISTS `Customer_Vertical_Names` (
+            `CustomerId` int NOT NULL,
+            `FirstName` varchar(40) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+            `LastName` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+            PRIMARY KEY (`CustomerId`)
+            )
+    """)
+
+    # m1: Customers who are from the USA or Canada(Primary Horizontal Fragmentation)
+    localData_cursor = localData.cursor(buffered=True)
+    localData_query = 'SELECT CustomerId, FirstName, LastName FROM Customer'
+
+    print("Vertical Fragmentation m1")
+    print("")
+    print("Fragment fetched from localhost")
+    localData_cursor.execute(localData_query)
+    local_customers_query_results = localData_cursor.fetchall()
+    print(local_customers_query_results)
+    print("")
+
+    # Inserting the data into site table
+    mysqlFragment_clear = "DELETE FROM Customer_Vertical_Names"
+    mysqlFragment_cursor.execute(mysqlFragment_clear)
+    mysqlFragment_insert_customers_sql = """
+    INSERT INTO `Customer_Vertical_Names`
+    (`CustomerId`,`FirstName`,`LastName`)
+    VALUES(%s,%s,%s);
+    """
+    mysqlFragment_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
+    mysqlFragment.commit();
+
+
+init_fragment();
+customer_vertical_fragment()
