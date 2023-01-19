@@ -2,7 +2,7 @@ import psycopg2
 import mysql.connector
 
 connection = psycopg2.connect(
-    host='192.168.5.217',
+    host='192.168.5.229',
     user='postgres',
     password='password',
     database='distributedFragment'

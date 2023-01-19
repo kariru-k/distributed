@@ -120,13 +120,14 @@ def company_customers_invoices_fragments():
     'BillingState' NVARCHAR(40),
     'BillingCountry' NVARCHAR(40),
     'BillingPostalCode' NVARCHAR(10),
+    'Total' INTEGER,
     CONSTRAINT 'PK_Invoice' PRIMARY KEY  ('InvoiceId')
 )
 """)
 
     localData_cursor = localData.cursor(buffered=True)
     localData_query = """
-        SELECT InvoiceId, Invoice.CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode
+        SELECT InvoiceId, Invoice.CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total
         FROM Customer, Invoice
         Where Customer.Company IS NOT NULL
         AND Customer.CustomerId = Invoice.CustomerId
@@ -136,6 +137,14 @@ def company_customers_invoices_fragments():
     print("Minterm fragment fetched from localhost")
     localData_cursor.execute(localData_query)
     local_customers_query_results = localData_cursor.fetchall()
+
+
+    for i in range(len(local_customers_query_results)):
+        local_customers_query_results[i] = list(local_customers_query_results[i])
+        local_customers_query_results[i][8] = str(local_customers_query_results[i][8])
+        local_customers_query_results[i] = tuple(local_customers_query_results[i])
+
+
     print(local_customers_query_results)
     print("")
 
@@ -144,8 +153,8 @@ def company_customers_invoices_fragments():
     sqlitefragment_cursor.execute(mysqlFragment_clear)
     mysqlFragment_insert_customers_sql = """
             INSERT INTO CompanyClientsInvoice
-            (InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode)
-            VALUES(?,?,?,?,?,?,?,?);
+            (InvoiceId, CustomerId, InvoiceDate, BillingAddress, BillingCity, BillingState, BillingCountry, BillingPostalCode, Total)
+            VALUES(?,?,?,?,?,?,?,?,?);
             """
     sqlitefragment_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
     sqlitefragment.commit()

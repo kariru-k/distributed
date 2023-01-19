@@ -106,7 +106,7 @@ def customer_vertical_fragment():
     VALUES(%s,%s,%s);
     """
     mysqlFragment_cursor.executemany(mysqlFragment_insert_customers_sql, local_customers_query_results)
-    mysqlFragment.commit();
+    mysqlFragment.commit()
 
 
 init_fragment();

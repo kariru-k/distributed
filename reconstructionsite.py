@@ -12,7 +12,7 @@ mysqlFragment = mysql.connector.connect(
 mysqlFragment_cursor = mysqlFragment.cursor()
 
 connection = psycopg2.connect(
-    host='192.168.5.217',
+    host='192.168.5.229',
     user='postgres',
     password='password',
     database='distributedFragment'
@@ -119,8 +119,47 @@ def reconstruct_primary_horizontal_fragment_2():
     mysqlFragment.commit()
 
 
+# Reconstruction of derived horizontal fragments
+def reconstruct_derived_horizontal_fragment():
+    sqlitefragment_query = "SELECT * FROM CompanyClientsInvoice"
+    connection_query = "SELECT * FROM noncompanycustomersinvoice"
+
+    sqlitefragment_cursor.execute(sqlitefragment_query)
+    sqlitefragment_queryresults = sqlitefragment_cursor.fetchall()
+    print(sqlitefragment_queryresults)
+
+    connection_cursor.execute(connection_query)
+    connection_cursor_queryresults = connection_cursor.fetchall()
+    print(connection_cursor_queryresults)
+
+    mysqlFragment_cursor.execute("""
+                CREATE TABLE IF NOT EXISTS `ReconstructedInvoicesFromCompany` (
+                    `InvoiceId` int NOT NULL,
+                    `CustomerId` int NOT NULL,
+                    `InvoiceDate` datetime NOT NULL,
+                    `BillingAddress` varchar(70) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+                    `BillingCity` varchar(40) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+                    `BillingState` varchar(40) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+                    `BillingCountry` varchar(40) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+                    `BillingPostalCode` varchar(10) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci DEFAULT NULL,
+                    `Total` decimal(10,2),
+                    PRIMARY KEY (`InvoiceId`)
+                    )
+            """)
+
+    mysqlFragment_clear = "DELETE FROM ReconstructedInvoicesFromCompany"
+    mysqlFragment_cursor.execute(mysqlFragment_clear)
+
+    mysqlFragment_insert_customers_sql = """
+            INSERT INTO `ReconstructedInvoicesFromCompany`
+            (`InvoiceId`,`CustomerId`,`InvoiceDate`,`BillingAddress`,`BillingCity`,`BillingState`,`BillingCountry`,`BillingPostalCode`, `Total`)
+            VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s);
+            """
+    mysqlFragment_cursor.executemany(mysqlFragment_insert_customers_sql, sqlitefragment_queryresults)
+    mysqlFragment_cursor.executemany(mysqlFragment_insert_customers_sql, connection_cursor_queryresults)
+    mysqlFragment.commit()
 
 
 reconstruct_primary_horizontal_fragment_1()
 reconstruct_primary_horizontal_fragment_2()
-
+reconstruct_derived_horizontal_fragment()
